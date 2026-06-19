@@ -1,0 +1,24 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.19
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+
+ ✓ Starting...
+ ✓ Ready in 1945ms
+ ○ Compiling / ...
+ ✓ Compiled / in 7s (653 modules)
+ GET / 200 in 8027ms
+ ○ Compiling /signup ...
+ ✓ Compiled /signup in 1025ms (646 modules)
+ GET /signup 200 in 1374ms
+ GET /signup 200 in 67ms
+ GET / 200 in 485ms
+ GET /signup 200 in 66ms
+ ○ Compiling /login ...
+ ✓ Compiled /login in 865ms (639 modules)
+ GET /login 200 in 1273ms
+ ✓ Compiled /dashboard in 432ms (648 modules)
+ GET /dashboard 200 in 681ms
