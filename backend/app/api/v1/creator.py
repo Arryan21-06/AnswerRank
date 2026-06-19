@@ -11,6 +11,7 @@ from app.db.schema import (
     AuditListResponse,
 )
 from app.db.client import supabase_client
+from app.workers.tasks import process_content_audit
 
 router = APIRouter()
 
@@ -142,13 +143,18 @@ def submit_content(
             "creator_id": creator_id,
             "source_url": request.source_url,
             "platform": platform,
-            "status": "queued",
+            "status": "pending",
         }
 
         audit_response = supabase_client.table("audits").insert(audit_data).execute()
         if not audit_response.data:
             response.status_code = status.HTTP_400_BAD_REQUEST
             return APIResponse(success=False, error="Failed to create audit")
+
+        audit_id = audit_response.data[0]["id"]
+
+        # Trigger Celery task asynchronously
+        process_content_audit.delay(audit_id, request.source_url)
 
         response.status_code = status.HTTP_201_CREATED
         return APIResponse(success=True, data=Audit(**audit_response.data[0]))
