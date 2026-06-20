@@ -39,7 +39,7 @@ function LoginForm() {
       if (returnTo) {
         router.push(returnTo);
       } else {
-        router.push(data.user.role === "creator" ? "/creator" : "/brand");
+        router.push(data.user.role === "creator" ? "/dashboard/creator" : "/dashboard/brand");
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
