@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 const MOCK_RADAR_DATA = [
   { subject: "Citation Likelihood", A: 85, fullMark: 100 },
@@ -137,7 +138,12 @@ export default function CreatorDashboard() {
       </div>
 
       {/* Top Stats Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         <Card className="bg-white shadow-sm border border-zinc-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-zinc-600">AnswerRank Score</CardTitle>
@@ -235,10 +241,15 @@ export default function CreatorDashboard() {
             <p className="text-xs text-zinc-500 mt-1">Based on citation likelihood</p>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Chart Placeholder */}
-      <div className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-7">
+      <motion.div
+        className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-7"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
          <div className="md:col-span-3">
              {/* Score Breakdown Chart */}
             <Card className="bg-white shadow-sm border border-zinc-100 col-span-3 h-[400px]">
@@ -390,8 +401,12 @@ export default function CreatorDashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-4 text-zinc-500">
-                          No content analyzed yet.
+                        <TableCell colSpan={4} className="text-center py-16 text-zinc-500">
+                          <div className="flex flex-col items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-inbox h-10 w-10 text-zinc-300"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                            <p className="font-medium text-black">No content analyzed yet</p>
+                            <p className="text-sm">Click &quot;Analyze New Content&quot; to get started.</p>
+                          </div>
                         </TableCell>
                       </TableRow>
                     )}
@@ -400,7 +415,7 @@ export default function CreatorDashboard() {
               </CardContent>
             </Card>
          </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
