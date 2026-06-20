@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import Globe from "../../components/Globe";
+import dynamic from 'next/dynamic';
+
+const Globe = dynamic(() => import('@/components/Globe'), { ssr: false });
 
 export default function Home() {
   return (
