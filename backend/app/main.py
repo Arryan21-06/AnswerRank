@@ -9,9 +9,14 @@ app = FastAPI(title="AnswerRank API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001",
-                   "http://localhost:3002", "http://localhost:3003",
-                   "http://localhost:3004", "http://localhost:3005"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:3003",
+        "http://localhost:3004",
+        "http://localhost:3005",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -264,7 +264,7 @@ export default function CreatorDashboard() {
               </CardHeader>
               <CardContent className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={MOCK_RADAR_DATA}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data?.radar_data || MOCK_RADAR_DATA}>
                     <PolarGrid stroke="#e4e4e7" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: "#3f3f46", fontSize: 12 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
@@ -356,34 +356,38 @@ export default function CreatorDashboard() {
                                     <div className="flex flex-col gap-3">
                                       <div className="flex items-center justify-between">
                                         <span className="text-zinc-600 text-sm">Citation Likelihood</span>
-                                        <span className="font-medium text-black">85/100</span>
+                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.direct_answer_density * 100) : 0}/100</span>
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <span className="text-zinc-600 text-sm">Authority</span>
-                                        <span className="font-medium text-black">60/100</span>
+                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.content_depth * 100) : 0}/100</span>
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <span className="text-zinc-600 text-sm">Freshness</span>
-                                        <span className="font-medium text-black">90/100</span>
+                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.freshness * 100) : 0}/100</span>
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <span className="text-zinc-600 text-sm">Structure</span>
-                                        <span className="font-medium text-black">75/100</span>
+                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(((auditDetail.score_record.structured_data + auditDetail.score_record.formatting_quality) / 2) * 100) : 0}/100</span>
                                       </div>
                                       <div className="flex items-center justify-between">
                                         <span className="text-zinc-600 text-sm">Engagement</span>
-                                        <span className="font-medium text-black">80/100</span>
+                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.faq_coverage * 100) : 0}/100</span>
                                       </div>
                                     </div>
                                   </div>
 
                                   <div>
-                                    <h3 className="text-lg font-semibold text-black mb-2">AI Recommendations</h3>
-                                    <ul className="list-disc pl-5 space-y-2 text-sm text-zinc-700">
-                                      <li>Add a structured FAQ section with at least 5 Q&A pairs.</li>
-                                      <li>Use clearer definitions for named entities.</li>
-                                      <li>Ensure content is formatted with proper hierarchical headers.</li>
-                                    </ul>
+                                    <h3 className="text-lg font-semibold text-black mb-2">Optimization Tips</h3>
+                                    <ol className="list-decimal pl-5 space-y-2 text-sm text-zinc-700">
+                                      {auditDetail.audit?.recommendations?.length > 0 ? (
+                                        auditDetail.audit.recommendations.map((rec: string, index: number) => (
+                                          <li key={index}>{rec}</li>
+                                        ))
+                                      ) : (
+                                        <li>No recommendations available yet. Analyze content to get tips.</li>
+                                      )}
+                                    </ol>
                                   </div>
 
                                   <div className="pt-4">

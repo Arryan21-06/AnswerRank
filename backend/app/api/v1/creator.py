@@ -12,9 +12,13 @@ from app.db.schema import (
     ContentSubmitRequest,
     Audit,
     AuditListResponse,
+    AuditDetailResponse,
 )
 from app.db.client import supabase_client
-from app.workers.tasks import process_content_audit
+from app.services.scoring.content_fetcher import fetch_content
+from app.services.scoring.ai_analyzer import analyze_content
+from app.services.scoring.score_calculator import calculate_score
+from app.services.scoring.recommendation_engine import generate_recommendations
 
 router = APIRouter()
 
@@ -98,7 +102,17 @@ def get_creator_dashboard(
             )
             return APIResponse(
                 success=True,
-                data=CreatorDashboardData(profile=profile, recent_audits=[]),
+                data=CreatorDashboardData(
+                    profile=profile,
+                    recent_audits=[],
+                    radar_data=[
+                        {"subject": "Citation Likelihood", "A": 0, "fullMark": 100},
+                        {"subject": "Authority", "A": 0, "fullMark": 100},
+                        {"subject": "Freshness", "A": 0, "fullMark": 100},
+                        {"subject": "Structure", "A": 0, "fullMark": 100},
+                        {"subject": "Engagement", "A": 0, "fullMark": 100},
+                    ],
+                ),
             )
 
         profile = CreatorProfile(**profile_response.data)
@@ -117,9 +131,102 @@ def get_creator_dashboard(
             else []
         )
 
+        # Calculate overall score and radar data based on all audits of this creator
+        all_audits_response = (
+            supabase_client.table("audits")
+            .select("id, composite_score")
+            .eq("creator_id", profile.id)
+            .eq("status", "complete")
+            .execute()
+        )
+        all_audits = all_audits_response.data if all_audits_response.data else []
+
+        radar_data = [
+            {"subject": "Citation Likelihood", "A": 0, "fullMark": 100},
+            {"subject": "Authority", "A": 0, "fullMark": 100},
+            {"subject": "Freshness", "A": 0, "fullMark": 100},
+            {"subject": "Structure", "A": 0, "fullMark": 100},
+            {"subject": "Engagement", "A": 0, "fullMark": 100},
+        ]
+
+        if all_audits:
+            audit_ids = [a["id"] for a in all_audits]
+            avg_composite_score = sum(
+                a.get("composite_score") or 0.0 for a in all_audits
+            ) / len(all_audits)
+
+            # Fetch score records for these audits
+            scores_response = (
+                supabase_client.table("score_records")
+                .select("*")
+                .in_("audit_id", audit_ids)
+                .execute()
+            )
+            scores = scores_response.data if scores_response.data else []
+
+            if scores:
+                avg_citation = sum(
+                    s.get("direct_answer_density", 0.0) * 100 for s in scores
+                ) / len(scores)
+                avg_authority = sum(
+                    s.get("content_depth", 0.0) * 100 for s in scores
+                ) / len(scores)
+                avg_freshness = sum(
+                    s.get("freshness", 0.0) * 100 for s in scores
+                ) / len(scores)
+                avg_structure = sum(
+                    (s.get("structured_data", 0.0) + s.get("formatting_quality", 0.0))
+                    / 2
+                    * 100
+                    for s in scores
+                ) / len(scores)
+                # We use faq_coverage or a mix for engagement since engagement is mapped differently, let's use faq_coverage
+                avg_engagement = sum(
+                    s.get("faq_coverage", 0.0) * 100 for s in scores
+                ) / len(scores)
+
+                radar_data = [
+                    {
+                        "subject": "Citation Likelihood",
+                        "A": round(avg_citation, 2),
+                        "fullMark": 100,
+                    },
+                    {
+                        "subject": "Authority",
+                        "A": round(avg_authority, 2),
+                        "fullMark": 100,
+                    },
+                    {
+                        "subject": "Freshness",
+                        "A": round(avg_freshness, 2),
+                        "fullMark": 100,
+                    },
+                    {
+                        "subject": "Structure",
+                        "A": round(avg_structure, 2),
+                        "fullMark": 100,
+                    },
+                    {
+                        "subject": "Engagement",
+                        "A": round(avg_engagement, 2),
+                        "fullMark": 100,
+                    },
+                ]
+
+            if (
+                profile.current_answer_rank_score is None
+                or profile.current_answer_rank_score != round(avg_composite_score, 2)
+            ):
+                profile.current_answer_rank_score = round(avg_composite_score, 2)
+                supabase_client.table("creator_profiles").update(
+                    {"current_answer_rank_score": profile.current_answer_rank_score}
+                ).eq("id", profile.id).execute()
+
         return APIResponse(
             success=True,
-            data=CreatorDashboardData(profile=profile, recent_audits=audits),
+            data=CreatorDashboardData(
+                profile=profile, recent_audits=audits, radar_data=radar_data
+            ),
         )
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -127,7 +234,7 @@ def get_creator_dashboard(
 
 
 @router.post("/content", response_model=APIResponse[Audit])
-def submit_content(
+async def submit_content(
     request: ContentSubmitRequest,
     response: Response,
     current_user: User = Depends(require_role(["creator"])),
@@ -165,11 +272,52 @@ def submit_content(
 
         audit_id = audit_response.data[0]["id"]
 
-        # Trigger Celery task asynchronously
-        process_content_audit.delay(audit_id, request.source_url)
+        # Run actual Gemini scoring pipeline synchronously (awaiting async functions)
+        try:
+            # Update status to processing to reflect start
+            supabase_client.table("audits").update({"status": "processing"}).eq(
+                "id", audit_id
+            ).execute()
 
-        response.status_code = status.HTTP_201_CREATED
-        return APIResponse(success=True, data=Audit(**audit_response.data[0]))
+            content_data = await fetch_content(request.source_url)
+            ai_scores = await analyze_content(content_data)
+            recommendations = await generate_recommendations(content_data["raw_text"])
+
+            # calculate_score updates the status to 'complete' and saves to score_records
+            calculate_score(uuid.UUID(audit_id), ai_scores)
+
+            # We also need to save recommendations to the audit
+            supabase_client.table("audits").update(
+                {"recommendations": recommendations}
+            ).eq("id", audit_id).execute()
+
+            # Refetch the updated audit
+            final_audit_resp = (
+                supabase_client.table("audits")
+                .select("*")
+                .eq("id", audit_id)
+                .single()
+                .execute()
+            )
+
+            response.status_code = status.HTTP_201_CREATED
+            return APIResponse(success=True, data=Audit(**final_audit_resp.data))
+        except Exception as pipeline_error:
+            supabase_client.table("audits").update(
+                {"status": "failed", "failure_reason": str(pipeline_error)}
+            ).eq("id", audit_id).execute()
+
+            # Re-fetch so we return the failed status properly
+            failed_audit_resp = (
+                supabase_client.table("audits")
+                .select("*")
+                .eq("id", audit_id)
+                .single()
+                .execute()
+            )
+
+            response.status_code = status.HTTP_201_CREATED
+            return APIResponse(success=True, data=Audit(**failed_audit_resp.data))
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return APIResponse(success=False, error=str(e))
@@ -191,9 +339,7 @@ def list_content(
             .execute()
         )
         if not profile_response.data:
-            return APIResponse(
-                success=True, data=AuditListResponse(audits=[], total=0)
-            )
+            return APIResponse(success=True, data=AuditListResponse(audits=[], total=0))
 
         creator_id = profile_response.data["id"]
 
@@ -230,7 +376,7 @@ def list_content(
         return APIResponse(success=False, error=str(e))
 
 
-@router.get("/content/{id}", response_model=APIResponse[Audit])
+@router.get("/content/{id}", response_model=APIResponse[AuditDetailResponse])
 def get_content(
     id: str,
     response: Response,
@@ -262,7 +408,29 @@ def get_content(
             response.status_code = status.HTTP_404_NOT_FOUND
             return APIResponse(success=False, error="Audit not found")
 
-        return APIResponse(success=True, data=Audit(**audit_response.data))
+        audit_data = Audit(**audit_response.data)
+
+        from app.db.schema import ScoreRecord
+
+        score_record = None
+        try:
+            score_response = (
+                supabase_client.table("score_records")
+                .select("*")
+                .eq("audit_id", id)
+                .single()
+                .execute()
+            )
+            if score_response.data:
+                score_record = ScoreRecord(**score_response.data)
+        except Exception:
+            # single() raises an exception if 0 rows are found, which is normal for failed/pending audits
+            pass
+
+        return APIResponse(
+            success=True,
+            data=AuditDetailResponse(audit=audit_data, score_record=score_record),
+        )
     except Exception as e:
         response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         return APIResponse(success=False, error=str(e))
