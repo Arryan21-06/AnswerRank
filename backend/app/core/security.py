@@ -46,10 +46,13 @@ def get_current_user(
 
         return User(**db_response.data)
 
-    except AuthApiError as e:
+    except AuthApiError:
+        # Check if it's an invalid refresh token or any other auth error to cleanly return 401
+        detail_msg = "Invalid or expired token"
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=str(e),
+            detail=detail_msg,
             headers={"WWW-Authenticate": "Bearer"},
         )
     except Exception:

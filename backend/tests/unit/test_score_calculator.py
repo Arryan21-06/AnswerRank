@@ -2,7 +2,8 @@ from unittest.mock import patch, MagicMock
 from uuid import uuid4
 from app.services.scoring.score_calculator import calculate_score
 
-@patch('app.services.scoring.score_calculator.supabase_client')
+
+@patch("app.services.scoring.score_calculator.supabase_client")
 def test_calculate_score(mock_supabase):
     # Setup mock
     mock_table = MagicMock()

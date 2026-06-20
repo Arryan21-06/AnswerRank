@@ -2,6 +2,7 @@ import pytest
 from httpx import Response
 from app.services.scoring.content_fetcher import fetch_content
 
+
 @pytest.mark.asyncio
 async def test_fetch_content(respx_mock):
     url = "https://example.com/blog-post"

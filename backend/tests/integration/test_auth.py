@@ -5,6 +5,7 @@ from uuid import uuid4
 
 client = TestClient(app)
 
+
 @patch("app.api.v1.auth.supabase_client")
 def test_register_creator(mock_supabase):
     mock_uuid = str(uuid4())
@@ -25,8 +26,8 @@ def test_register_creator(mock_supabase):
             "email": "test@creator.com",
             "password": "password123",
             "role": "creator",
-            "full_name": "Test Creator"
-        }
+            "full_name": "Test Creator",
+        },
     )
 
     assert response.status_code == 201
@@ -72,15 +73,12 @@ def test_login(mock_supabase):
         "full_name": "Test Creator",
         "created_at": "2023-01-01T00:00:00Z",
         "updated_at": "2023-01-01T00:00:00Z",
-        "last_login": "2023-01-01T00:00:00Z"
+        "last_login": "2023-01-01T00:00:00Z",
     }
 
     response = client.post(
         "/api/v1/auth/login",
-        json={
-            "email": "test@creator.com",
-            "password": "password123"
-        }
+        json={"email": "test@creator.com", "password": "password123"},
     )
 
     assert response.status_code == 200

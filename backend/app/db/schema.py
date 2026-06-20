@@ -64,6 +64,7 @@ class Audit(BaseModel):
     vector_id: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    recommendations: Optional[list[str]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -189,6 +190,7 @@ class ContentSubmitRequest(BaseModel):
 class CreatorDashboardData(BaseModel):
     profile: CreatorProfile
     recent_audits: list[Audit]
+    radar_data: list[dict]
 
 
 class BrandDashboardData(BaseModel):
@@ -206,6 +208,11 @@ class BrandSearchRequest(BaseModel):
 class CreatorPublicProfile(BaseModel):
     creator: CreatorProfile
     recent_scores: list[ScoreRecord]
+
+
+class AuditDetailResponse(BaseModel):
+    audit: Audit
+    score_record: Optional[ScoreRecord] = None
 
 
 class AuditListResponse(BaseModel):
