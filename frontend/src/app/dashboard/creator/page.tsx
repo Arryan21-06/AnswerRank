@@ -126,7 +126,10 @@ export default function CreatorDashboard() {
             </div>
             <DialogFooter>
               <Button
-                onClick={() => submitContentMutation.mutate(newContentUrl)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  submitContentMutation.mutate(newContentUrl);
+                }}
                 disabled={!newContentUrl || submitContentMutation.isPending}
                 className="bg-[#1A7FE0] hover:bg-blue-600 text-white"
               >
@@ -386,7 +389,10 @@ export default function CreatorDashboard() {
                                   <div className="pt-4">
                                     <button
                                       className="bg-black text-white px-4 py-2 rounded-md hover:bg-zinc-800 transition-colors w-full"
-                                      onClick={() => submitContentMutation.mutate(audit.source_url)}
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        submitContentMutation.mutate(audit.source_url);
+                                      }}
                                     >
                                       {submitContentMutation.isPending ? "Re-analyzing..." : "Re-analyze"}
                                     </button>
