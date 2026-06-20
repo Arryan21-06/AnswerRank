@@ -1,5 +1,8 @@
 from fastapi import APIRouter, Depends, status, Response
 from app.core.security import require_role
+import uuid
+from datetime import datetime
+
 from app.db.schema import (
     User,
     CreatorProfile,
@@ -86,8 +89,17 @@ def get_creator_dashboard(
             .execute()
         )
         if not profile_response.data:
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return APIResponse(success=False, error="Creator profile not found")
+            profile = CreatorProfile(
+                id=uuid.uuid4(),
+                user_id=current_user.id,
+                primary_niche="General",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            return APIResponse(
+                success=True,
+                data=CreatorDashboardData(profile=profile, recent_audits=[]),
+            )
 
         profile = CreatorProfile(**profile_response.data)
 
@@ -179,8 +191,9 @@ def list_content(
             .execute()
         )
         if not profile_response.data:
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return APIResponse(success=False, error="Creator profile not found")
+            return APIResponse(
+                success=True, data=AuditListResponse(audits=[], total=0)
+            )
 
         creator_id = profile_response.data["id"]
 
