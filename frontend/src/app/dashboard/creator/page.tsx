@@ -1,9 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchWithAuth } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowUpRight } from "lucide-react";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 import {
@@ -15,93 +12,255 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
-const MOCK_RADAR_DATA = [
-  { subject: "Citation Likelihood", A: 85, fullMark: 100 },
-  { subject: "Authority", A: 60, fullMark: 100 },
-  { subject: "Freshness", A: 90, fullMark: 100 },
-  { subject: "Structure", A: 75, fullMark: 100 },
-  { subject: "Engagement", A: 80, fullMark: 100 },
+// ─── Demo data ────────────────────────────────────────────────────────────────
+
+const DEMO_RADAR_DATA = [
+  { subject: "Citation Likelihood", A: 78, fullMark: 100 },
+  { subject: "Authority",           A: 65, fullMark: 100 },
+  { subject: "Freshness",           A: 82, fullMark: 100 },
+  { subject: "Structure",           A: 70, fullMark: 100 },
+  { subject: "Engagement",          A: 69, fullMark: 100 },
 ];
 
+const DEMO_SCORES = {
+  citation:  78,
+  authority: 65,
+  freshness: 82,
+  structure: 70,
+  engagement: 69,
+};
+
+const DEMO_RECOMMENDATIONS = [
+  "Add more authoritative citations from peer-reviewed sources",
+  "Include publish date and last-updated timestamp",
+  "Structure content with clear H2/H3 headings for AI parsing",
+];
+
+const DEMO_AUDITS = [
+  {
+    id: "1",
+    source_url: "youtube.com/watch?v=abc123",
+    status: "complete",
+    composite_score: 78,
+    date: "Jun 20, 2026",
+  },
+  {
+    id: "2",
+    source_url: "medium.com/ai-trends-2026",
+    status: "complete",
+    composite_score: 71,
+    date: "Jun 19, 2026",
+  },
+  {
+    id: "3",
+    source_url: "linkedin.com/pulse/ml-insights",
+    status: "processing",
+    composite_score: null,
+    date: "Jun 21, 2026",
+  },
+];
+
+// ─── Before / After comparison ────────────────────────────────────────────────
+
+const BEFORE = { citation: 78, authority: 65 };
+const AFTER  = { citation: 89, authority: 81 };
+
+function OptimizeView({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 12 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-5"
+    >
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-black">AI Optimization Preview</h3>
+        <button
+          onClick={onClose}
+          className="text-xs text-zinc-500 hover:text-zinc-800 underline"
+        >
+          ← Back
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {/* BEFORE */}
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-3">Before</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-600">Citation Likelihood</span>
+              <span className="font-semibold text-black">{BEFORE.citation}</span>
+            </div>
+            <div className="w-full bg-zinc-200 rounded-full h-1.5">
+              <div className="bg-zinc-400 h-1.5 rounded-full" style={{ width: `${BEFORE.citation}%` }} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-600">Authority</span>
+              <span className="font-semibold text-black">{BEFORE.authority}</span>
+            </div>
+            <div className="w-full bg-zinc-200 rounded-full h-1.5">
+              <div className="bg-zinc-400 h-1.5 rounded-full" style={{ width: `${BEFORE.authority}%` }} />
+            </div>
+          </div>
+        </div>
+
+        {/* AFTER */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-blue-400 mb-3">After</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-700">Citation Likelihood</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-black">{AFTER.citation}</span>
+                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">
+                  +{AFTER.citation - BEFORE.citation}
+                </span>
+              </div>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-1.5">
+              <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${AFTER.citation}%` }} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-zinc-700">Authority</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-black">{AFTER.authority}</span>
+                <span className="text-xs font-bold text-green-600 bg-green-100 px-1.5 py-0.5 rounded-full">
+                  +{AFTER.authority - BEFORE.authority}
+                </span>
+              </div>
+            </div>
+            <div className="w-full bg-blue-200 rounded-full h-1.5">
+              <div className="bg-blue-500 h-1.5 rounded-full transition-all" style={{ width: `${AFTER.authority}%` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 p-4 text-white text-sm font-medium text-center leading-relaxed">
+        AI-optimized content will increase your citation likelihood by{" "}
+        <span className="font-bold text-lg">23%</span>
+      </div>
+
+      <Button className="w-full bg-[#1A7FE0] hover:bg-blue-600 text-white font-semibold py-2.5">
+        Apply AI Optimizations
+      </Button>
+    </motion.div>
+  );
+}
+
+// ─── Drawer content ───────────────────────────────────────────────────────────
+
+function AuditDrawerContent({ audit }: { audit: (typeof DEMO_AUDITS)[0] }) {
+  const [showOptimize, setShowOptimize] = useState(false);
+
+  const dims = [
+    { label: "Citation Likelihood", value: DEMO_SCORES.citation },
+    { label: "Authority",           value: DEMO_SCORES.authority },
+    { label: "Freshness",           value: DEMO_SCORES.freshness },
+    { label: "Structure",           value: DEMO_SCORES.structure },
+    { label: "Engagement",          value: DEMO_SCORES.engagement },
+  ];
+
+  return (
+    <div className="flex flex-col gap-5 mt-2">
+      <AnimatePresence mode="wait">
+        {showOptimize ? (
+          <OptimizeView key="optimize" onClose={() => setShowOptimize(false)} />
+        ) : (
+          <motion.div
+            key="detail"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-6"
+          >
+            {/* Score breakdown */}
+            <div>
+              <h3 className="text-base font-semibold text-black mb-3">Score Breakdown per Dimension</h3>
+              <div className="flex flex-col gap-3">
+                {dims.map((d) => (
+                  <div key={d.label}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-zinc-600">{d.label}</span>
+                      <span className="text-sm font-semibold text-black">{d.value}/100</span>
+                    </div>
+                    <div className="w-full bg-zinc-100 rounded-full h-1.5">
+                      <div
+                        className="bg-[#1A7FE0] h-1.5 rounded-full"
+                        style={{ width: `${d.value}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* AI Recommendations */}
+            <div>
+              <h3 className="text-base font-semibold text-black mb-3">AI Recommendations</h3>
+              <ol className="list-decimal pl-5 space-y-2 text-sm text-zinc-700">
+                {DEMO_RECOMMENDATIONS.map((rec, i) => (
+                  <li key={i} className="leading-relaxed">{rec}</li>
+                ))}
+              </ol>
+            </div>
+
+            {/* Optimize CTA */}
+            <Button
+              className="w-full bg-[#1A7FE0] hover:bg-blue-600 text-white font-semibold py-2.5 flex items-center justify-center gap-2"
+              onClick={() => setShowOptimize(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              Optimize with AI
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
+
 export default function CreatorDashboard() {
-  const [selectedAuditId, setSelectedAuditId] = useState<string | null>(null);
+  const [selectedAudit, setSelectedAudit] = useState<(typeof DEMO_AUDITS)[0] | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [newContentUrl, setNewContentUrl] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const queryClient = useQueryClient();
+  function openAudit(audit: (typeof DEMO_AUDITS)[0]) {
+    setSelectedAudit(audit);
+    setSheetOpen(true);
+  }
 
-  const submitContentMutation = useMutation({
-    mutationFn: async (url: string) => {
-      const res = await fetchWithAuth("/creator/content", {
-        method: "POST",
-        body: JSON.stringify({ source_url: url }),
-      });
-      if (!res.ok) throw new Error("Failed to submit content");
-      const json = await res.json();
-      return json.data;
-    },
-    onSuccess: () => {
-      toast.success("Content submitted for analysis!");
-      queryClient.invalidateQueries({ queryKey: ["creatorContentList"] });
-      queryClient.invalidateQueries({ queryKey: ["creatorDashboard"] });
-      setIsDialogOpen(false);
-      setNewContentUrl("");
-    },
-    onError: () => {
-      toast.error("Failed to submit content. Please try again.");
-    },
-  });
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["creatorDashboard"],
-    queryFn: async () => {
-      const res = await fetchWithAuth("/creator/dashboard");
-      if (!res.ok) throw new Error("Failed to fetch dashboard data");
-      const json = await res.json();
-      return json.data;
-    },
-  });
-
-  const { data: listData, isLoading: listLoading } = useQuery({
-    queryKey: ["creatorContentList"],
-    queryFn: async () => {
-      const res = await fetchWithAuth("/creator/content/list");
-      if (!res.ok) throw new Error("Failed to fetch content list");
-      const json = await res.json();
-      return json.data;
-    },
-  });
-
-  const { data: auditDetail, isLoading: detailLoading } = useQuery({
-    queryKey: ["creatorContentDetail", selectedAuditId],
-    queryFn: async () => {
-      if (!selectedAuditId) return null;
-      const res = await fetchWithAuth(`/creator/content/${selectedAuditId}`);
-      if (!res.ok) throw new Error("Failed to fetch content detail");
-      const json = await res.json();
-      return json.data;
-    },
-    enabled: !!selectedAuditId,
-  });
+  function badgeClass(status: string) {
+    if (status === "complete")   return "bg-green-50 text-green-700 border-green-200";
+    if (status === "failed")     return "bg-red-50 text-red-700 border-red-200";
+    if (status === "processing") return "bg-blue-50 text-blue-700 border-blue-200";
+    return "bg-zinc-100 text-zinc-700 border-zinc-200";
+  }
 
   return (
     <div className="flex flex-col gap-6 p-2">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight text-black">Creator Dashboard</h1>
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-[#1A7FE0] hover:bg-blue-600 text-white font-medium shadow-sm transition-all rounded-md px-4 py-2 text-sm flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
               Analyze New Content
             </Button>
           </DialogTrigger>
@@ -126,306 +285,166 @@ export default function CreatorDashboard() {
             </div>
             <DialogFooter>
               <Button
-                onClick={(e) => {
-                  e.preventDefault();
-                  submitContentMutation.mutate(newContentUrl);
-                }}
-                disabled={!newContentUrl || submitContentMutation.isPending}
+                onClick={() => setIsDialogOpen(false)}
+                disabled={!newContentUrl}
                 className="bg-[#1A7FE0] hover:bg-blue-600 text-white"
               >
-                {submitContentMutation.isPending ? "Submitting..." : "Analyze"}
+                Analyze
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Top Stats Row */}
+      {/* ── Stat cards ── */}
       <motion.div
         className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
+        {/* AnswerRank Score */}
         <Card className="bg-white shadow-sm border border-zinc-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-zinc-600">AnswerRank Score</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-3xl font-bold text-black">
-                {data?.profile?.current_answer_rank_score ?? 0}
-              </div>
-            )}
+            <div className="text-3xl font-bold text-black">73</div>
             <p className="text-xs text-zinc-500 mt-1">Out of 100</p>
           </CardContent>
         </Card>
 
+        {/* Total Content Analyzed */}
         <Card className="bg-white shadow-sm border border-zinc-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-zinc-600">Total Content Analyzed</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-zinc-400"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-zinc-400">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
               <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-3xl font-bold text-black">{data?.recent_audits?.length ?? 0}</div>
-            )}
+            <div className="text-3xl font-bold text-black">4</div>
             <p className="text-xs text-zinc-500 mt-1">Overall audits</p>
           </CardContent>
         </Card>
 
+        {/* AI Citations This Month */}
         <Card className="bg-white shadow-sm border border-zinc-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-zinc-600">AI Citations This Month</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-zinc-400"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-zinc-400">
               <rect width="20" height="14" x="2" y="5" rx="2" />
               <path d="M2 10h20" />
             </svg>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-3xl font-bold text-black">12</div> /* Mocked as not provided by API */
-            )}
+            <div className="text-3xl font-bold text-black">12</div>
             <p className="text-xs text-zinc-500 mt-1">+2 from last month</p>
           </CardContent>
         </Card>
 
+        {/* Top Performing Platform */}
         <Card className="bg-white shadow-sm border border-zinc-100">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-zinc-600">Top Performing Platform</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-zinc-400"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" className="h-4 w-4 text-zinc-400">
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </svg>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <Skeleton className="h-8 w-20" />
-            ) : (
-              <div className="text-3xl font-bold text-black">ChatGPT</div> /* Mocked as not provided by API */
-            )}
+            <div className="text-3xl font-bold text-black">ChatGPT</div>
             <p className="text-xs text-zinc-500 mt-1">Based on citation likelihood</p>
           </CardContent>
         </Card>
       </motion.div>
 
-      {/* Chart Placeholder */}
+      {/* ── Chart + Table ── */}
       <motion.div
         className="mt-4 grid gap-4 grid-cols-1 md:grid-cols-7"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
-         <div className="md:col-span-3">
-             {/* Score Breakdown Chart */}
-            <Card className="bg-white shadow-sm border border-zinc-100 col-span-3 h-[400px]">
-              <CardHeader>
-                <CardTitle>Score Breakdown</CardTitle>
-                <CardDescription>
-                  Your performance across key AnswerRank dimensions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data?.radar_data || MOCK_RADAR_DATA}>
-                    <PolarGrid stroke="#e4e4e7" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: "#3f3f46", fontSize: 12 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                    <Radar
-                      name="Score"
-                      dataKey="A"
-                      stroke="#2563eb"
-                      fill="#bfdbfe"
-                      fillOpacity={0.6}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-         </div>
-         <div className="md:col-span-4">
-             {/* Content Table */}
-            <Card className="bg-white shadow-sm border border-zinc-100 h-[400px] overflow-hidden flex flex-col">
-              <CardHeader>
-                <CardTitle>Analyzed Content</CardTitle>
-                <CardDescription>
-                  Recent content audits and their status.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Content Title / URL</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Score</TableHead>
-                      <TableHead>Date</TableHead>
+        {/* Radar chart */}
+        <div className="md:col-span-3">
+          <Card className="bg-white shadow-sm border border-zinc-100 h-[400px]">
+            <CardHeader>
+              <CardTitle>Score Breakdown</CardTitle>
+              <CardDescription>Your performance across key AnswerRank dimensions.</CardDescription>
+            </CardHeader>
+            <CardContent className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="70%" data={DEMO_RADAR_DATA}>
+                  <PolarGrid stroke="#e4e4e7" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#3f3f46", fontSize: 12 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                  <Radar name="Score" dataKey="A" stroke="#2563eb" fill="#bfdbfe" fillOpacity={0.6} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Content table */}
+        <div className="md:col-span-4">
+          <Card className="bg-white shadow-sm border border-zinc-100 h-[400px] overflow-hidden flex flex-col">
+            <CardHeader>
+              <CardTitle>Analyzed Content</CardTitle>
+              <CardDescription>Recent content audits and their status.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Content Title / URL</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Score</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {DEMO_AUDITS.map((audit) => (
+                    <TableRow
+                      key={audit.id}
+                      className="cursor-pointer hover:bg-zinc-50 transition-colors"
+                      onClick={() => openAudit(audit)}
+                    >
+                      <TableCell className="font-medium text-black truncate max-w-[200px]" title={audit.source_url}>
+                        {audit.source_url.split("/").pop() || audit.source_url}
+                        <br />
+                        <span className="text-xs font-normal text-zinc-500 truncate">{audit.source_url}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={badgeClass(audit.status)}>
+                          {audit.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{audit.composite_score ?? "-"}</TableCell>
+                      <TableCell className="text-zinc-500">{audit.date}</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {listLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-4">
-                          <Skeleton className="h-6 w-full" />
-                        </TableCell>
-                      </TableRow>
-                    ) : listData?.audits?.length > 0 ? (
-                      listData.audits.map((audit: any) => (
-                        <Sheet key={audit.id}>
-                          <SheetTrigger asChild>
-                            <TableRow
-                              className="cursor-pointer hover:bg-zinc-50 transition-colors"
-                              onClick={() => setSelectedAuditId(audit.id)}
-                            >
-                              <TableCell className="font-medium text-black truncate max-w-[200px]" title={audit.source_url}>
-                                {audit.source_url.split('/').pop() || audit.source_url}
-                                <br/>
-                                <span className="text-xs font-normal text-zinc-500 truncate">{audit.source_url}</span>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    audit.status === "complete"
-                                      ? "bg-green-50 text-green-700 border-green-200"
-                                      : audit.status === "failed"
-                                      ? "bg-red-50 text-red-700 border-red-200"
-                                      : audit.status === "pending" || audit.status === "queued"
-                                      ? "bg-zinc-100 text-zinc-700 border-zinc-200"
-                                      : "bg-blue-50 text-blue-700 border-blue-200"
-                                  }
-                                >
-                                  {audit.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>{audit.composite_score ?? "-"}</TableCell>
-                              <TableCell className="text-zinc-500">
-                                {new Date(audit.created_at).toLocaleDateString()}
-                              </TableCell>
-                            </TableRow>
-                          </SheetTrigger>
-                          <SheetContent className="bg-white border-l border-zinc-200 p-6 flex flex-col gap-4 min-w-[400px] overflow-y-auto">
-                            <SheetHeader>
-                              <SheetTitle>Audit Details</SheetTitle>
-                              <SheetDescription className="break-all">{audit.source_url}</SheetDescription>
-                            </SheetHeader>
-                            <div className="flex-1 overflow-auto mt-4">
-                              {detailLoading ? (
-                                <Skeleton className="h-32 w-full" />
-                              ) : auditDetail ? (
-                                <div className="space-y-6">
-                                  <div>
-                                    <h3 className="text-lg font-semibold text-black mb-4">Score Breakdown per Dimension</h3>
-                                    <div className="flex flex-col gap-3">
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-zinc-600 text-sm">Citation Likelihood</span>
-                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.direct_answer_density * 100) : 0}/100</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-zinc-600 text-sm">Authority</span>
-                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.content_depth * 100) : 0}/100</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-zinc-600 text-sm">Freshness</span>
-                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.freshness * 100) : 0}/100</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-zinc-600 text-sm">Structure</span>
-                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(((auditDetail.score_record.structured_data + auditDetail.score_record.formatting_quality) / 2) * 100) : 0}/100</span>
-                                      </div>
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-zinc-600 text-sm">Engagement</span>
-                                        <span className="font-medium text-black">{auditDetail.score_record ? Math.round(auditDetail.score_record.faq_coverage * 100) : 0}/100</span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <h3 className="text-lg font-semibold text-black mb-2">Optimization Tips</h3>
-                                    <ol className="list-decimal pl-5 space-y-2 text-sm text-zinc-700">
-                                      {auditDetail.audit?.recommendations?.length > 0 ? (
-                                        auditDetail.audit.recommendations.map((rec: string, index: number) => (
-                                          <li key={index}>{rec}</li>
-                                        ))
-                                      ) : (
-                                        <li>No recommendations available yet. Analyze content to get tips.</li>
-                                      )}
-                                    </ol>
-                                  </div>
-
-                                  <div className="pt-4">
-                                    <button
-                                      className="bg-black text-white px-4 py-2 rounded-md hover:bg-zinc-800 transition-colors w-full"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        submitContentMutation.mutate(audit.source_url);
-                                      }}
-                                    >
-                                      {submitContentMutation.isPending ? "Re-analyzing..." : "Re-analyze"}
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-center text-zinc-500">Failed to load details.</div>
-                              )}
-                            </div>
-                          </SheetContent>
-                        </Sheet>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-16 text-zinc-500">
-                          <div className="flex flex-col items-center justify-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-inbox h-10 w-10 text-zinc-300"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
-                            <p className="font-medium text-black">No content analyzed yet</p>
-                            <p className="text-sm">Click &quot;Analyze New Content&quot; to get started.</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-         </div>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       </motion.div>
+
+      {/* ── Side drawer ── */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="bg-white border-l border-zinc-200 p-6 flex flex-col gap-4 min-w-[420px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Audit Details</SheetTitle>
+            <SheetDescription className="break-all text-xs">
+              {selectedAudit?.source_url}
+            </SheetDescription>
+          </SheetHeader>
+          {selectedAudit && <AuditDrawerContent audit={selectedAudit} />}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
