@@ -56,7 +56,7 @@ class Audit(BaseModel):
     source_url: str
     platform: Literal["youtube", "blog"]
     status: Literal[
-        "queued", "ingesting", "scoring", "indexing", "complete", "failed"
+        "queued", "pending", "processing", "ingesting", "scoring", "indexing", "complete", "failed"
     ] = "queued"
     failure_reason: Optional[str] = None
     composite_score: Optional[float] = Field(None, decimal_places=2, ge=0.0, le=100.0)

@@ -88,7 +88,7 @@ def get_creator_dashboard(
             supabase_client.table("creator_profiles")
             .select("*")
             .eq("user_id", current_user.id)
-            .single()
+            .maybe_single()
             .execute()
         )
         if not profile_response.data:
@@ -239,7 +239,7 @@ async def submit_content(
             supabase_client.table("creator_profiles")
             .select("id")
             .eq("user_id", current_user.id)
-            .single()
+            .maybe_single()
             .execute()
         )
         if not profile_response.data:
@@ -330,7 +330,7 @@ def list_content(
             supabase_client.table("creator_profiles")
             .select("id")
             .eq("user_id", current_user.id)
-            .single()
+            .maybe_single()
             .execute()
         )
         if not profile_response.data:
