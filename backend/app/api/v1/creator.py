@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, status, Response
 from app.core.security import require_role
 import uuid
-from datetime import datetime
 
 from app.db.schema import (
     User,
@@ -93,29 +92,25 @@ def get_creator_dashboard(
             .execute()
         )
         if not profile_response.data:
-            profile = CreatorProfile(
-                id=uuid.uuid4(),
-                user_id=current_user.id,
-                primary_niche="General",
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+            new_profile_data = {
+                "user_id": str(current_user.id),
+                "primary_niche": "General",
+            }
+            inserted_response = (
+                supabase_client.table("creator_profiles")
+                .insert(new_profile_data)
+                .execute()
             )
-            return APIResponse(
-                success=True,
-                data=CreatorDashboardData(
-                    profile=profile,
-                    recent_audits=[],
-                    radar_data=[
-                        {"subject": "Citation Likelihood", "A": 0, "fullMark": 100},
-                        {"subject": "Authority", "A": 0, "fullMark": 100},
-                        {"subject": "Freshness", "A": 0, "fullMark": 100},
-                        {"subject": "Structure", "A": 0, "fullMark": 100},
-                        {"subject": "Engagement", "A": 0, "fullMark": 100},
-                    ],
-                ),
-            )
+            if not inserted_response.data:
+                response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+                return APIResponse(
+                    success=False, error="Failed to create default creator profile"
+                )
+            profile_data = inserted_response.data[0]
+        else:
+            profile_data = profile_response.data
 
-        profile = CreatorProfile(**profile_response.data)
+        profile = CreatorProfile(**profile_data)
 
         audits_response = (
             supabase_client.table("audits")
