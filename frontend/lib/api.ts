@@ -14,8 +14,8 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Ensure content type is JSON if not explicitly set and there's a body
-  if (options.body && !headers.has('Content-Type')) {
+  // Ensure content type is JSON
+  if (!headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -48,7 +48,7 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
           const retryHeaders = new Headers(options.headers || {});
           retryHeaders.set('Authorization', `Bearer ${data.access_token}`);
 
-          if (options.body && !retryHeaders.has('Content-Type')) {
+          if (!retryHeaders.has('Content-Type')) {
              retryHeaders.set('Content-Type', 'application/json');
           }
 

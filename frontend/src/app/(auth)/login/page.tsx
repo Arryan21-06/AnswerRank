@@ -39,7 +39,7 @@ function LoginForm() {
       if (returnTo) {
         router.push(returnTo);
       } else {
-        router.push(data.user.role === "creator" ? "/creator" : "/brand");
+        router.push(data.user.role === "creator" ? "/dashboard/creator" : "/dashboard/brand");
       }
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -53,10 +53,10 @@ function LoginForm() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-black px-4">
-      <div className="w-full max-w-md space-y-8 bg-white dark:bg-zinc-900 p-8 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
+      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-xl shadow-sm border border-zinc-200">
         <div>
-          <h2 className="text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h2 className="text-center text-3xl font-bold tracking-tight text-zinc-900">
             Sign in to your account
           </h2>
         </div>
@@ -73,7 +73,7 @@ function LoginForm() {
                 type="email"
                 autoComplete="email"
                 required
-                className="relative block w-full rounded-md border-0 py-1.5 px-3 text-zinc-900 dark:text-zinc-100 ring-1 ring-inset ring-zinc-300 dark:ring-zinc-700 placeholder:text-zinc-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-black dark:focus:ring-white sm:text-sm sm:leading-6 dark:bg-zinc-800"
+                className="relative block w-full rounded-md border-0 py-1.5 px-3 text-zinc-900 ring-1 ring-inset ring-zinc-300 placeholder:text-zinc-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-black sm:text-sm sm:leading-6"
                 placeholder="Email address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -87,7 +87,7 @@ function LoginForm() {
                 type="password"
                 autoComplete="current-password"
                 required
-                className="relative block w-full rounded-md border-0 py-1.5 px-3 text-zinc-900 dark:text-zinc-100 ring-1 ring-inset ring-zinc-300 dark:ring-zinc-700 placeholder:text-zinc-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-black dark:focus:ring-white sm:text-sm sm:leading-6 dark:bg-zinc-800"
+                className="relative block w-full rounded-md border-0 py-1.5 px-3 text-zinc-900 ring-1 ring-inset ring-zinc-300 placeholder:text-zinc-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-black sm:text-sm sm:leading-6"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -99,15 +99,15 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex w-full justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+              className="flex w-full justify-center rounded-md bg-black px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:opacity-50"
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </div>
         </form>
-        <div className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="text-center text-sm text-zinc-600">
           Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-black hover:text-zinc-800 dark:text-white dark:hover:text-zinc-200">
+          <Link href="/signup" className="font-medium text-black hover:text-zinc-800">
             Sign up
           </Link>
         </div>

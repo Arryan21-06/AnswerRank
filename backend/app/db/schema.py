@@ -1,3 +1,5 @@
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, Literal, Dict, Any
 from datetime import datetime
@@ -54,7 +56,7 @@ class Audit(BaseModel):
     source_url: str
     platform: Literal["youtube", "blog"]
     status: Literal[
-        "queued", "ingesting", "scoring", "indexing", "complete", "failed"
+        "queued", "pending", "processing", "ingesting", "scoring", "indexing", "complete", "failed"
     ] = "queued"
     failure_reason: Optional[str] = None
     composite_score: Optional[float] = Field(None, decimal_places=2, ge=0.0, le=100.0)
@@ -62,6 +64,7 @@ class Audit(BaseModel):
     vector_id: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    recommendations: Optional[list[str]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -157,3 +160,61 @@ class AuditLog(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+T = TypeVar("T")
+
+
+class APIResponse(BaseModel, Generic[T]):
+    success: bool = True
+    data: Optional[T] = None
+    error: Optional[str] = None
+
+
+class CreatorProfileUpdate(BaseModel):
+    primary_niche: Optional[str] = None
+    handle: Optional[str] = None
+    platform: Optional[Literal["youtube", "blog", "instagram"]] = None
+    follower_count: Optional[int] = None
+
+
+class BrandProfileUpdate(BaseModel):
+    company_name: Optional[str] = None
+    industry: Optional[str] = None
+
+
+class ContentSubmitRequest(BaseModel):
+    source_url: str
+
+
+class CreatorDashboardData(BaseModel):
+    profile: CreatorProfile
+    recent_audits: list[Audit]
+    radar_data: list[dict]
+
+
+class BrandDashboardData(BaseModel):
+    profile: BrandProfile
+    recent_queries: list[CampaignQuery]
+    saved_creator_count: int
+
+
+class BrandSearchRequest(BaseModel):
+    query_text: str
+    niche_filter: Optional[str] = None
+    min_score_filter: Optional[float] = Field(None, decimal_places=2, ge=0.0, le=100.0)
+
+
+class CreatorPublicProfile(BaseModel):
+    creator: CreatorProfile
+    recent_scores: list[ScoreRecord]
+
+
+class AuditDetailResponse(BaseModel):
+    audit: Audit
+    score_record: Optional[ScoreRecord] = None
+
+
+class AuditListResponse(BaseModel):
+    audits: list[Audit]
+    total: int
